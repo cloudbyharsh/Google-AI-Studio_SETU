@@ -1,0 +1,6 @@
+{
+  "name": "SETU",
+  "description": "Verified tradition-matched astrologers and pandits for sacred family ceremonies and guidance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

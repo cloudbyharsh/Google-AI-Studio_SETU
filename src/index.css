@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Serif+Devanagari:wght@400;500;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-brand: "Cormorant Garamond", Georgia, serif;
+  --font-devanagari: "Noto Serif Devanagari", serif;
+
+  --color-gold: #C4922A;
+  --color-maroon: #610000;
+  --color-saffron: #E8621A;
+  --color-ivory: #FAF7F0;
+  --color-sandalwood: #2C1608;
+  --color-teal: #1B6B5A;
+  --color-pink: #C8789A;
+  --color-yellow: #F4A020;
+  --color-warm-ivory: #FCFAF5;
+
+  --radius-card: 16px;
+  --radius-button: 8px;
+  --radius-input: 10px;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-ivory);
+    color: var(--color-sandalwood);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom input styling for consistent Sandalwood theme */
+  input, select, textarea {
+    color: var(--color-sandalwood);
+  }
+
+  /* Elegant scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-ivory);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-warm-ivory);
+    border: 1px solid var(--color-ivory);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gold);
+  }
+}
+
+/* Custom elevations as defined in Style Guide */
+.shadow-card-default {
+  box-shadow: 0 2px 12px rgba(44, 22, 8, 0.06), 0 1px 3px rgba(44, 22, 8, 0.04);
+}
+
+.shadow-card-hover {
+  box-shadow: 0 8px 32px rgba(44, 22, 8, 0.1), 0 2px 8px rgba(44, 22, 8, 0.06);
+}
+
+.glow-gold {
+  box-shadow: 0 0 0 3px rgba(196, 146, 42, 0.28);
+}
+
+.glow-maroon {
+  box-shadow: 0 0 0 3px rgba(97, 0, 0, 0.15);
+}
+
+/* Continuously slow looping rotation for decorative sacred geometry */
+@keyframes slow-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes reverse-slow-spin {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-slow-spin-80 {
+  animation: slow-spin 80s linear infinite;
+}
+
+.animate-slow-spin-120 {
+  animation: reverse-slow-spin 120s linear infinite;
+}
