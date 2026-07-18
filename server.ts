@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { Resend } from "resend";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
@@ -105,12 +104,12 @@ const app = express();
 app.use(express.json());
 
 // API routes registered synchronously at the module level
-app.get("/api/health", (req, res) => {
+app.get(["/api/health", "/health"], (req, res) => {
   res.json({ status: "ok" });
 });
 
 // Generate Kundli Report (Calls Gemini 3.5 Flash or Fallback)
-app.post("/api/generate-kundli", async (req, res) => {
+app.post(["/api/generate-kundli", "/generate-kundli"], async (req, res) => {
     const { name, birthDate, birthTime, birthPlace, isTimeApprox } = req.body;
 
     if (!name || !birthDate || !birthPlace) {
@@ -171,13 +170,20 @@ Return the response STRICTLY as a JSON object matching this schema:
 }
 `;
 
-        const response = await ai.models.generateContent({
+        const geminiPromise = ai.models.generateContent({
           model: "gemini-3.5-flash",
           contents: systemPrompt,
           config: {
             responseMimeType: "application/json",
           }
         });
+
+        // Fail-safe 7.5 second timeout to stay well below Vercel's 10-second serverless gateway limit
+        const timeoutPromise = new Promise<any>((_, reject) => {
+          setTimeout(() => reject(new Error("Gemini API calculation timed out")), 7500);
+        });
+
+        const response = await Promise.race([geminiPromise, timeoutPromise]);
 
         const rawText = response.text || "";
         const report = JSON.parse(rawText.trim());
@@ -251,7 +257,7 @@ Return the response STRICTLY as a JSON object matching this schema:
   });
 
   // Unlock remaining Kundli sections and send complete email (Requires Lead details)
-  app.post("/api/unlock-kundli", async (req, res) => {
+  app.post(["/api/unlock-kundli", "/unlock-kundli"], async (req, res) => {
     const { kundliId, name, email, phone } = req.body;
 
     if (!kundliId || !email) {
@@ -556,7 +562,7 @@ Return the response STRICTLY as a JSON object matching this schema:
   });
 
   // Sender Email sending route with Resend
-  app.post("/api/send-email", async (req, res) => {
+  app.post(["/api/send-email", "/send-email"], async (req, res) => {
     const { to, subject, html, text } = req.body;
 
     if (!to || !subject || (!html && !text)) {
@@ -609,6 +615,7 @@ async function startViteAndListen() {
 
     // Vite middleware setup
     if (process.env.NODE_ENV !== "production") {
+      const { createServer: createViteServer } = await import("vite");
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
