@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Menu, X, ShieldCheck, HelpCircle, Sparkles, UserCheck, Home } from "lucide-react";
+import { Menu, X, ShieldCheck, HelpCircle, Sparkles, UserCheck, Home, MessageSquare } from "lucide-react";
 import RotatingMandala from "./RotatingMandala";
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenKundli: () => void;
   onOpenVerification: () => void;
   onOpenHelp: () => void;
+  onContactClick: () => void;
 }
 
 export default function Header({
@@ -16,6 +17,7 @@ export default function Header({
   onOpenKundli,
   onOpenVerification,
   onOpenHelp,
+  onContactClick,
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -86,6 +88,12 @@ export default function Header({
             <HelpCircle className="w-3.5 h-3.5 text-gold" />
             Help
           </button>
+          <button
+            onClick={onContactClick}
+            className="hover:text-maroon transition-colors cursor-pointer p-2 focus:outline-none focus:ring-1 focus:ring-maroon rounded"
+          >
+            Contact Us
+          </button>
         </nav>
 
         {/* Traditional reassurance label (desktop only) */}
@@ -143,6 +151,13 @@ export default function Header({
           >
             <HelpCircle className="w-4 h-4 text-gold" />
             Help & Trust Policies
+          </button>
+          <button
+            onClick={() => handleNavClick(onContactClick)}
+            className="w-full text-left py-3 px-4 text-xs font-sans font-bold uppercase tracking-wider text-sandalwood hover:text-maroon hover:bg-ivory rounded-lg transition-all flex items-center gap-2"
+          >
+            <MessageSquare className="w-4 h-4 text-maroon" />
+            Contact Us
           </button>
         </div>
       )}

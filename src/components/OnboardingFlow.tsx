@@ -142,7 +142,8 @@ const INSIGHTS_DATA: Record<string, InsightContent> = {
 
 interface OnboardingFlowProps {
   onSelectPractitioner: (practitioner: Practitioner, service?: Service | null) => void;
-  onSkipToDirectory: () => void;
+  onSkipToDirectory: (intent?: string | null) => void;
+  onOpenKundli: () => void;
 }
 
 type OnboardingStep = "landing" | "concern" | "birth-details" | "loading" | "insight-results";
@@ -158,6 +159,7 @@ interface ConcernOption {
 export default function OnboardingFlow({
   onSelectPractitioner,
   onSkipToDirectory,
+  onOpenKundli,
 }: OnboardingFlowProps) {
   const [step, setStep] = useState<OnboardingStep>("landing");
   
@@ -434,6 +436,29 @@ export default function OnboardingFlow({
       }));
       return;
     }
+
+    // Determine if the concern requires astrological calculation (e.g. Birth Chart, Horoscope)
+    const isAstrological = selectedConcern.id === "career-finances" || selectedConcern.id === "marriage-relationships";
+
+    if (!isAstrological) {
+      // For non-astrological services (such as Home Puja, Vastu, or Marriage Ceremony),
+      // we skip the birth chart flow entirely and go directly to the Practitioner Directory.
+      let targetIntent: string | null = "puja";
+      if (selectedConcern.id === "home-vastu") {
+        targetIntent = "vastu";
+      } else if (selectedConcern.id === "general-guidance") {
+        targetIntent = "not-sure";
+      }
+
+      triggerEvent("onboarding_skipped_for_non_astrology", {
+        concern_id: selectedConcern.id,
+        target_intent: targetIntent
+      });
+
+      onSkipToDirectory(targetIntent);
+      return;
+    }
+
     setStep("birth-details");
     triggerEvent("birth_details_started", {
       form_name: "birth_coordinates_form",
@@ -822,13 +847,22 @@ export default function OnboardingFlow({
             </div>
 
             {/* Primary Action Button */}
-            <div className="max-w-sm mx-auto space-y-4">
+            <div className="max-w-sm mx-auto space-y-3">
               <button
                 onClick={handleStartOnboarding}
                 className="w-full py-4.5 bg-maroon hover:bg-sandalwood text-ivory font-sans font-bold text-xs tracking-[0.2em] uppercase rounded-xl shadow-card-default hover:shadow-card-hover hover:scale-[1.01] transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold flex items-center justify-center gap-2 group"
               >
                 <span>Find the right guidance</span>
                 <ArrowRight className="w-4 h-4 text-gold group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button
+                onClick={onOpenKundli}
+                className="w-full py-4 bg-warm-ivory border border-maroon/20 hover:border-maroon/50 text-maroon font-sans font-bold text-xs tracking-[0.15em] uppercase rounded-xl shadow-sm hover:scale-[1.01] transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-maroon"
+                id="landing-free-kundli-cta"
+              >
+                <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+                <span>Get Free Kundli Report</span>
               </button>
 
               <button

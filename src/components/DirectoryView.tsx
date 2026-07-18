@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Compass, Star, ArrowRight, ShieldCheck, Sparkles, X, Info, Search, HelpCircle, MapPin, Languages, CheckCircle2 } from "lucide-react";
+import { Compass, Star, ArrowRight, ShieldCheck, Sparkles, X, Info, Search, HelpCircle, MapPin, Languages, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import { Practitioner, Service } from "../types";
 import { PRACTITIONERS } from "../data";
 import RotatingMandala from "./RotatingMandala";
@@ -9,6 +9,7 @@ import { analytics } from "../lib/analytics";
 interface DirectoryViewProps {
   onSelectPractitioner: (practitioner: Practitioner, service?: Service | null) => void;
   onOpenKundliModal: () => void;
+  initialIntent?: string | null;
 }
 
 // Simple elegant console event tracker for the prototype, updated to call centralized analytics
@@ -93,10 +94,11 @@ export const MUHURATS: MuhuratDate[] = [
 export default function DirectoryView({
   onSelectPractitioner,
   onOpenKundliModal,
+  initialIntent = null,
 }: DirectoryViewProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIntent, setSelectedIntent] = useState<string | null>(null);
+  const [selectedIntent, setSelectedIntent] = useState<string | null>(initialIntent);
   const [activeDirectoryTab, setActiveDirectoryTab] = useState<"rituals" | "practitioners">("rituals");
   const [selectedRitual, setSelectedRitual] = useState<any | null>(null);
   const [showTip, setShowTip] = useState(() => {
@@ -106,6 +108,19 @@ export default function DirectoryView({
   const [showMuhuratCalendar, setShowMuhuratCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<"july" | "august">("july");
   const [selectedMuhuratDate, setSelectedMuhuratDate] = useState<string | null>(null);
+
+  // New interactive advanced filter state
+  const [selectedTradition, setSelectedTradition] = useState<string>("Any");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("Any");
+  const [selectedLocation, setSelectedLocation] = useState<string>("Any");
+  const [selectedAvailability, setSelectedAvailability] = useState<string>("Any");
+  const [selectedExperience, setSelectedExperience] = useState<string>("Any");
+
+  useEffect(() => {
+    if (initialIntent !== undefined && initialIntent !== null) {
+      setSelectedIntent(initialIntent);
+    }
+  }, [initialIntent]);
 
   // Track initial screen visit
   useEffect(() => {
@@ -206,26 +221,52 @@ export default function DirectoryView({
     });
   });
 
-  // Filter rituals based on search query and selected intent
+  // Filter rituals based on search query, selected intent and advanced filters
   const filteredRituals = allRituals.filter((r) => {
+    const p = r.practitioner;
+    // 1. Search Query
     const matchesSearch =
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.practitioner.name.toLowerCase().includes(searchQuery.toLowerCase());
+      p.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
 
-    if (!selectedIntent) return true;
-    if (selectedIntent === "puja") {
-      return r.category === "Puja" || r.category === "Havan";
+    // 2. Intent filtering
+    if (selectedIntent && selectedIntent !== "not-sure") {
+      if (selectedIntent === "puja" && !(r.category === "Puja" || r.category === "Havan")) return false;
+      if (selectedIntent === "astrology" && r.category !== "Astrology") return false;
+      if (selectedIntent === "vastu" && !(r.category === "Vastu" || r.name.toLowerCase().includes("vastu"))) return false;
     }
-    if (selectedIntent === "astrology") {
-      return r.category === "Astrology";
+
+    // 3. Tradition Filter
+    if (selectedTradition !== "Any" && p.tradition !== selectedTradition) return false;
+
+    // 4. Language Filter
+    if (selectedLanguage !== "Any" && !p.languages?.includes(selectedLanguage)) return false;
+
+    // 5. Location / Format Filter
+    if (selectedLocation !== "Any") {
+      const isOnline = p.location?.toLowerCase().includes("online") || p.id === "meenakshi-iyer";
+      const isInPerson = p.location?.toLowerCase().includes("toronto") || p.location?.toLowerCase().includes("gta") || p.location?.toLowerCase().includes("in-person");
+      if (selectedLocation === "online" && !isOnline) return false;
+      if (selectedLocation === "inperson" && !isInPerson) return false;
     }
-    if (selectedIntent === "vastu") {
-      return r.category === "Vastu" || r.name.toLowerCase().includes("vastu");
+
+    // 6. Availability Filter
+    if (selectedAvailability !== "Any") {
+      const days = p.id === "meenakshi-iyer" || p.id === "rajesh-shastri" ? 2 : 4;
+      if (selectedAvailability === "2days" && days > 2) return false;
+      if (selectedAvailability === "5days" && days > 5) return false;
     }
-    return true; // "not-sure"
+
+    // 7. Experience Filter
+    if (selectedExperience !== "Any") {
+      if (selectedExperience === "15years" && p.experienceYears < 15) return false;
+      if (selectedExperience === "20years" && p.experienceYears < 20) return false;
+    }
+
+    return true;
   });
 
   // Apply Muhurat date filter if selected
@@ -236,9 +277,9 @@ export default function DirectoryView({
       })
     : filteredRituals;
 
-  // Filter practitioners based on selected intent and search query
+  // Filter practitioners based on selected intent, search query and advanced filters
   const filteredPractitioners = PRACTITIONERS.filter((p) => {
-    // Search query matching
+    // 1. Search query matching
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.tradition.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -246,18 +287,41 @@ export default function DirectoryView({
 
     if (!matchesSearch) return false;
 
-    // Intent filtering
-    if (!selectedIntent) return true;
-    if (selectedIntent === "puja") {
-      return p.services.some((s) => s.category === "Puja" || s.category === "Havan");
+    // 2. Intent filtering
+    if (selectedIntent && selectedIntent !== "not-sure") {
+      if (selectedIntent === "puja" && !p.services.some((s) => s.category === "Puja" || s.category === "Havan")) return false;
+      if (selectedIntent === "astrology" && !p.services.some((s) => s.category === "Astrology")) return false;
+      if (selectedIntent === "vastu" && !p.specializations.some((s) => s.toLowerCase().includes("vastu"))) return false;
     }
-    if (selectedIntent === "astrology") {
-      return p.services.some((s) => s.category === "Astrology");
+
+    // 3. Tradition Filter
+    if (selectedTradition !== "Any" && p.tradition !== selectedTradition) return false;
+
+    // 4. Language Filter
+    if (selectedLanguage !== "Any" && !p.languages?.includes(selectedLanguage)) return false;
+
+    // 5. Location / Format Filter
+    if (selectedLocation !== "Any") {
+      const isOnline = p.location?.toLowerCase().includes("online") || p.id === "meenakshi-iyer";
+      const isInPerson = p.location?.toLowerCase().includes("toronto") || p.location?.toLowerCase().includes("gta") || p.location?.toLowerCase().includes("in-person");
+      if (selectedLocation === "online" && !isOnline) return false;
+      if (selectedLocation === "inperson" && !isInPerson) return false;
     }
-    if (selectedIntent === "vastu") {
-      return p.specializations.some((s) => s.toLowerCase().includes("vastu"));
+
+    // 6. Availability Filter
+    if (selectedAvailability !== "Any") {
+      const days = p.id === "meenakshi-iyer" || p.id === "rajesh-shastri" ? 2 : 4;
+      if (selectedAvailability === "2days" && days > 2) return false;
+      if (selectedAvailability === "5days" && days > 5) return false;
     }
-    return true; // "not-sure" shows all, with guidance
+
+    // 7. Experience Filter
+    if (selectedExperience !== "Any") {
+      if (selectedExperience === "15years" && p.experienceYears < 15) return false;
+      if (selectedExperience === "20years" && p.experienceYears < 20) return false;
+    }
+
+    return true;
   });
 
   // Apply Muhurat date filter to practitioners if selected
@@ -487,6 +551,123 @@ export default function DirectoryView({
             </motion.div>
           )}
         </AnimatePresence>
+      </section>
+
+      {/* Advanced Practitioner Filters */}
+      <section className="bg-warm-ivory border border-sandalwood/10 rounded-2xl p-5 space-y-4 relative z-10 text-left shadow-sm">
+        <div className="flex items-center justify-between border-b border-sandalwood/5 pb-2">
+          <div className="flex items-center gap-2 text-sandalwood/85">
+            <SlidersHorizontal className="w-4 h-4 text-gold" />
+            <h4 className="font-sans font-bold text-xs uppercase tracking-wider">Refine Practitioners & Services</h4>
+          </div>
+          {(selectedTradition !== "Any" || selectedLanguage !== "Any" || selectedLocation !== "Any" || selectedAvailability !== "Any" || selectedExperience !== "Any") && (
+            <button
+              onClick={() => {
+                setSelectedTradition("Any");
+                setSelectedLanguage("Any");
+                setSelectedLocation("Any");
+                setSelectedAvailability("Any");
+                setSelectedExperience("Any");
+                logEvent("filters_cleared");
+              }}
+              className="text-[10px] text-maroon font-sans font-bold hover:underline cursor-pointer"
+            >
+              Clear Advanced Filters
+            </button>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Tradition Dropdown */}
+          <div className="space-y-1">
+            <label className="block text-[9px] font-sans font-black text-sandalwood/50 uppercase tracking-wider">Tradition</label>
+            <select
+              value={selectedTradition}
+              onChange={(e) => {
+                setSelectedTradition(e.target.value);
+                logEvent("filter_tradition_changed", { value: e.target.value });
+              }}
+              className="w-full text-xs bg-ivory border border-sandalwood/15 rounded-lg p-2.5 text-sandalwood focus:outline-none focus:border-maroon cursor-pointer"
+            >
+              <option value="Any">All Traditions</option>
+              <option value="North Indian Vedic Tradition">North Indian</option>
+              <option value="South Indian Smartha/Iyer Tradition">South Indian Smartha</option>
+              <option value="Vedic Astrology (Jyotish)">Vedic Astrology</option>
+              <option value="Shaivite Ritual Tradition">Shaivite Rituals</option>
+            </select>
+          </div>
+
+          {/* Language Dropdown */}
+          <div className="space-y-1">
+            <label className="block text-[9px] font-sans font-black text-sandalwood/50 uppercase tracking-wider">Language</label>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => {
+                setSelectedLanguage(e.target.value);
+                logEvent("filter_language_changed", { value: e.target.value });
+              }}
+              className="w-full text-xs bg-ivory border border-sandalwood/15 rounded-lg p-2.5 text-sandalwood focus:outline-none focus:border-maroon cursor-pointer"
+            >
+              <option value="Any">All Languages</option>
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Sanskrit">Sanskrit</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Telugu">Telugu</option>
+            </select>
+          </div>
+
+          {/* Location / Format Dropdown */}
+          <div className="space-y-1">
+            <label className="block text-[9px] font-sans font-black text-sandalwood/50 uppercase tracking-wider">Location / Format</label>
+            <select
+              value={selectedLocation}
+              onChange={(e) => {
+                setSelectedLocation(e.target.value);
+                logEvent("filter_location_changed", { value: e.target.value });
+              }}
+              className="w-full text-xs bg-ivory border border-sandalwood/15 rounded-lg p-2.5 text-sandalwood focus:outline-none focus:border-maroon cursor-pointer"
+            >
+              <option value="Any">All Locations</option>
+              <option value="online">Online (Zoom Consult)</option>
+              <option value="inperson">In-Person (GTA/Home)</option>
+            </select>
+          </div>
+
+          {/* Availability Dropdown */}
+          <div className="space-y-1">
+            <label className="block text-[9px] font-sans font-black text-sandalwood/50 uppercase tracking-wider">Availability</label>
+            <select
+              value={selectedAvailability}
+              onChange={(e) => {
+                setSelectedAvailability(e.target.value);
+                logEvent("filter_availability_changed", { value: e.target.value });
+              }}
+              className="w-full text-xs bg-ivory border border-sandalwood/15 rounded-lg p-2.5 text-sandalwood focus:outline-none focus:border-maroon cursor-pointer"
+            >
+              <option value="Any">Any Availability</option>
+              <option value="2days">Within 2 Days</option>
+              <option value="5days">Within 5 Days</option>
+            </select>
+          </div>
+
+          {/* Experience Dropdown */}
+          <div className="space-y-1 col-span-2 md:col-span-1">
+            <label className="block text-[9px] font-sans font-black text-sandalwood/50 uppercase tracking-wider">Experience Level</label>
+            <select
+              value={selectedExperience}
+              onChange={(e) => {
+                setSelectedExperience(e.target.value);
+                logEvent("filter_experience_changed", { value: e.target.value });
+              }}
+              className="w-full text-xs bg-ivory border border-sandalwood/15 rounded-lg p-2.5 text-sandalwood focus:outline-none focus:border-maroon cursor-pointer"
+            >
+              <option value="Any">All Experience</option>
+              <option value="15years">15+ Years (Senior)</option>
+              <option value="20years">20+ Years (Master)</option>
+            </select>
+          </div>
+        </div>
       </section>
 
       {/* Tab Selector & Header */}

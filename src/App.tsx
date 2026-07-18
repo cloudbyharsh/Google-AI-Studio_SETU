@@ -7,7 +7,8 @@ import ProfileView from "./components/ProfileView";
 import BookingRequestView from "./components/BookingRequestView";
 import RequestReceivedView from "./components/RequestReceivedView";
 import BookingSecuredView from "./components/BookingSecuredView";
-import KundliModal from "./components/KundliModal";
+import KundliView from "./components/KundliView";
+import ContactView from "./components/ContactView";
 import { VerificationModal, HelpModal } from "./components/TrustModals";
 import { Practitioner, Service, BookingRequest } from "./types";
 import PrototypeValidationObserver from "./components/PrototypeValidationObserver";
@@ -20,7 +21,9 @@ type ScreenType =
   | "profile"
   | "booking-request"
   | "request-received"
-  | "booking-secured";
+  | "booking-secured"
+  | "contact"
+  | "kundli";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>("onboarding");
@@ -30,6 +33,7 @@ export default function App() {
   const [isKundliOpen, setIsKundliOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [selectedIntentForDirectory, setSelectedIntentForDirectory] = useState<string | null>(null);
 
   // Smoothly scroll back to top of the viewport on screen transitions
   useEffect(() => {
@@ -101,13 +105,19 @@ export default function App() {
       <Header
         onHomeClick={handleHomeClick}
         onFindPractitionerClick={() => {
+          setSelectedIntentForDirectory(null);
           setCurrentScreen("directory");
           setSelectedPractitioner(null);
           setSelectedService(null);
         }}
-        onOpenKundli={() => setIsKundliOpen(true)}
+        onOpenKundli={() => {
+          setCurrentScreen("kundli");
+          setSelectedPractitioner(null);
+          setSelectedService(null);
+        }}
         onOpenVerification={() => setIsVerificationOpen(true)}
         onOpenHelp={() => setIsHelpOpen(true)}
+        onContactClick={() => setCurrentScreen("contact")}
       />
 
       {/* Interactive Step Stepper */}
@@ -183,8 +193,14 @@ export default function App() {
                   setSelectedService(practitioner.services[0] || null);
                   setCurrentScreen("profile");
                 }}
-                onSkipToDirectory={() => {
+                onSkipToDirectory={(intent) => {
+                  setSelectedIntentForDirectory(intent || null);
                   setCurrentScreen("directory");
+                }}
+                onOpenKundli={() => {
+                  setCurrentScreen("kundli");
+                  setSelectedPractitioner(null);
+                  setSelectedService(null);
                 }}
               />
             </motion.div>
@@ -200,7 +216,12 @@ export default function App() {
             >
               <DirectoryView
                 onSelectPractitioner={handleSelectPractitioner}
-                onOpenKundliModal={() => setIsKundliOpen(true)}
+                onOpenKundliModal={() => {
+                  setCurrentScreen("kundli");
+                  setSelectedPractitioner(null);
+                  setSelectedService(null);
+                }}
+                initialIntent={selectedIntentForDirectory}
               />
             </motion.div>
           )}
@@ -273,11 +294,32 @@ export default function App() {
               />
             </motion.div>
           )}
+
+          {currentScreen === "contact" && (
+            <motion.div
+              key="contact"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.35 }}
+            >
+              <ContactView onBackToHome={handleHomeClick} />
+            </motion.div>
+          )}
+
+          {currentScreen === "kundli" && (
+            <motion.div
+              key="kundli"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.35 }}
+            >
+              <KundliView onBackToHome={handleHomeClick} />
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
-
-      {/* Free Standalone Kundli Modal */}
-      <KundliModal isOpen={isKundliOpen} onClose={() => setIsKundliOpen(false)} />
 
       {/* Trust & Policy Modals */}
       <VerificationModal isOpen={isVerificationOpen} onClose={() => setIsVerificationOpen(false)} />
