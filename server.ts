@@ -101,19 +101,16 @@ function generateFallbackReport(name: string, birthDate: string, birthTime: stri
 
 const app = express();
 
-async function startServer() {
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// Add JSON parsing middleware
+app.use(express.json());
 
-  // Add JSON parsing middleware
-  app.use(express.json());
+// API routes registered synchronously at the module level
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
-  // API routes first
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // Generate Kundli Report (Calls Gemini 3.5 Flash or Fallback)
-  app.post("/api/generate-kundli", async (req, res) => {
+// Generate Kundli Report (Calls Gemini 3.5 Flash or Fallback)
+app.post("/api/generate-kundli", async (req, res) => {
     const { name, birthDate, birthTime, birthPlace, isTimeApprox } = req.body;
 
     if (!name || !birthDate || !birthPlace) {
@@ -605,31 +602,34 @@ Return the response STRICTLY as a JSON object matching this schema:
     }
   });
 
-  // Vite middleware setup
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-    console.log("[SERVER] Vite middleware mounted in development mode");
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-    console.log(`[SERVER] Serving static assets from: ${distPath}`);
-  }
-
-  // Only bind port if we are NOT on Vercel
+async function startViteAndListen() {
+  // Only bind port and mount dev/prod static assets if we are NOT on Vercel
   if (!process.env.VERCEL) {
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+    // Vite middleware setup
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+      console.log("[SERVER] Vite middleware mounted in development mode");
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+      console.log(`[SERVER] Serving static assets from: ${distPath}`);
+    }
+
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`[SERVER] Full-Stack Server running on port ${PORT}`);
     });
   }
 }
 
-startServer();
+startViteAndListen();
 
 export default app;
