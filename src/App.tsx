@@ -30,7 +30,14 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>("onboarding");
   const [selectedPractitioner, setSelectedPractitioner] = useState<Practitioner | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [latestBooking, setLatestBooking] = useState<BookingRequest | null>(null);
+  const [latestBooking, setLatestBooking] = useState<BookingRequest | null>(() => {
+    try {
+      const saved = localStorage.getItem("setu_latest_booking");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isKundliOpen, setIsKundliOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -81,6 +88,34 @@ export default function App() {
 
   const handleFormSubmit = (bookingRequest: BookingRequest) => {
     setLatestBooking(bookingRequest);
+    
+    // Save details to browser local storage
+    try {
+      localStorage.setItem("setu_latest_booking", JSON.stringify(bookingRequest));
+      const existingBookings = JSON.parse(localStorage.getItem("setu_saved_bookings") || "[]");
+      existingBookings.unshift(bookingRequest);
+      localStorage.setItem("setu_saved_bookings", JSON.stringify(existingBookings));
+    } catch (e) {
+      console.error("[STORAGE] Could not save booking details to localStorage:", e);
+    }
+
+    // Save details to Google Sheets via backend
+    fetch("/api/sheets/save-booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...bookingRequest,
+        serviceName: selectedService?.title,
+        practitionerName: selectedPractitioner?.name,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          console.log(`%c[GOOGLE SHEETS] Booking saved to Google Sheet: ${data.sheetUrl}`, "color: #FFF; background: #0284C7; font-weight: bold; padding: 2px 6px;");
+        }
+      })
+      .catch((e) => console.error("[SHEETS ERROR] Failed to post booking to Google Sheets:", e));
     
     // Trigger real or simulated email sending (non-blocking)
     if (selectedPractitioner && selectedService) {

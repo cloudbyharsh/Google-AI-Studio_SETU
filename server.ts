@@ -4,6 +4,12 @@ import { Resend } from "resend";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import fs from "fs/promises";
+import {
+  appendBookingToSheet,
+  appendKundliLeadToSheet,
+  getOrCreateSpreadsheet,
+  setCustomSpreadsheetId,
+} from "./server/sheets";
 
 // Load environment variables
 dotenv.config();
@@ -548,6 +554,21 @@ Return the response STRICTLY as a JSON object matching this schema:
         console.error("[CRM ERROR] Failed to save lead to leads.json:", e);
       }
 
+      // Sync lead to Google Sheets
+      try {
+        await appendKundliLeadToSheet({
+          id: `lead-${Date.now()}`,
+          name: userName,
+          email,
+          phone: phone || "",
+          birthDate,
+          birthTime,
+          birthPlace
+        });
+      } catch (e) {
+        console.error("[SHEETS SYNC ERROR] Failed syncing Kundli lead to Google Sheets:", e);
+      }
+
       // Return full report to frontend so they can unlock sections instantly
       return res.json({
         success: true,
@@ -606,6 +627,46 @@ Return the response STRICTLY as a JSON object matching this schema:
       console.error("[EMAIL ERROR] Failed to send email:", error);
       return res.status(500).json({ error: error.message || "Failed to send email" });
     }
+  });
+
+  // Google Sheets API Endpoints
+  app.get(["/api/sheets/info", "/sheets/info"], async (req, res) => {
+    try {
+      const info = await getOrCreateSpreadsheet();
+      return res.json({ success: true, ...info });
+    } catch (error: any) {
+      console.error("[SHEETS INFO ERROR]", error);
+      return res.status(500).json({ success: false, error: error.message || "Failed to retrieve spreadsheet info" });
+    }
+  });
+
+  app.post(["/api/sheets/save-booking", "/sheets/save-booking"], async (req, res) => {
+    try {
+      const result = await appendBookingToSheet(req.body);
+      return res.json(result);
+    } catch (error: any) {
+      console.error("[SHEETS SAVE BOOKING ERROR]", error);
+      return res.status(500).json({ success: false, error: error.message || "Failed to save booking to Google Sheets" });
+    }
+  });
+
+  app.post(["/api/sheets/save-kundli-lead", "/sheets/save-kundli-lead"], async (req, res) => {
+    try {
+      const result = await appendKundliLeadToSheet(req.body);
+      return res.json(result);
+    } catch (error: any) {
+      console.error("[SHEETS SAVE KUNDLI ERROR]", error);
+      return res.status(500).json({ success: false, error: error.message || "Failed to save Kundli lead to Google Sheets" });
+    }
+  });
+
+  app.post(["/api/sheets/set-id", "/sheets/set-id"], (req, res) => {
+    const { spreadsheetId } = req.body;
+    if (!spreadsheetId) {
+      return res.status(400).json({ success: false, error: "spreadsheetId is required" });
+    }
+    setCustomSpreadsheetId(spreadsheetId);
+    return res.json({ success: true, spreadsheetId, sheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}` });
   });
 
 async function startViteAndListen() {

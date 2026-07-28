@@ -85,8 +85,23 @@ export default function KundliView({ onBackToHome }: KundliViewProps) {
 
       const data = await response.json();
       
-      // Load partial data
-      setKundliId(data.kundliId);
+    try {
+      const kundliEntry = {
+        id: data.kundliId || "kundli-" + Date.now(),
+        name: userName,
+        birthDate,
+        birthTime: birthTime || (isTimeApprox ? "Approximate" : ""),
+        birthPlace,
+        createdAt: new Date().toISOString()
+      };
+      const existing = JSON.parse(localStorage.getItem("setu_saved_kundli") || "[]");
+      existing.unshift(kundliEntry);
+      localStorage.setItem("setu_saved_kundli", JSON.stringify(existing));
+    } catch (e) {
+      console.error("[STORAGE] Could not save Kundli details to localStorage:", e);
+    }
+
+    setKundliId(data.kundliId);
       setBasicDetails(data.basicDetails);
       setPlacements(data.placements || []);
       setSection1(data.section1);
