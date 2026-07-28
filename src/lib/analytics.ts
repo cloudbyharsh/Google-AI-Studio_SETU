@@ -368,15 +368,28 @@ class SetuAnalyticsEngine {
       try {
         heapObj.track(eventName, cleanProps);
         
+        // Dispatch SPA virtual pageview to Heap if page/screen view event
+        if (typeof heapObj.trackPageview === "function" && (eventName.endsWith("_viewed") || cleanProps.screen)) {
+          heapObj.trackPageview({
+            page: cleanProps.screen || eventName,
+            url: window.location.href,
+            title: document.title
+          });
+        }
+
         // If the event includes user info, attach properties or identify in Heap
         if (properties.email) {
-          heapObj.identify(properties.email);
-          heapObj.addUserProperties({
-            name: properties.name,
-            phone: properties.phone,
-            birthDate: properties.birthDate,
-            birthPlace: properties.birthPlace
-          });
+          if (typeof heapObj.identify === "function") {
+            heapObj.identify(properties.email);
+          }
+          if (typeof heapObj.addUserProperties === "function") {
+            heapObj.addUserProperties({
+              name: properties.name,
+              phone: properties.phone,
+              birthDate: properties.birthDate,
+              birthPlace: properties.birthPlace
+            });
+          }
         }
       } catch (err) {
         console.error("[SETU ANALYTICS ENGINE] Heap forwarding error:", err);
