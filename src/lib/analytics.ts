@@ -192,63 +192,18 @@ class SetuAnalyticsEngine {
   }
 
   private initHeap() {
-    const heapAppId = (import.meta as any).env.VITE_HEAP_APP_ID || "";
-    if (!heapAppId) {
-      console.log(
-        "%c[SETU ANALYTICS ENGINE] Heap App ID not found in environment. Heap tracking skipped (define VITE_HEAP_APP_ID in .env).",
-        "color: #FFF; background: #666; font-weight: bold; padding: 2px 6px; border-radius: 4px;"
-      );
-      return;
-    }
-
-    // Official Heap Analytics snippet adapted for React
-    (window as any).heap = (window as any).heap || [];
-    const heapObj = (window as any).heap;
-    if (heapObj.load) return; // Already initialized
-
-    heapObj.load = function (e: string, t: any) {
-      heapObj.appid = e;
-      heapObj.config = t = t || {};
-      const r = document.createElement("script");
-      r.type = "text/javascript";
-      r.async = true;
-      r.src = "https://cdn.heapanalytics.com/js/heap-" + e + ".js";
-      const a = document.getElementsByTagName("script")[0];
-      if (a && a.parentNode) {
-        a.parentNode.insertBefore(r, a);
-      } else {
-        document.head.appendChild(r);
-      }
-      const n = function (eStr: string) {
-        return function () {
-          heapObj.push([eStr].concat(Array.prototype.slice.call(arguments, 0)));
-        };
-      };
-      const p = [
-        "addEventProperties",
-        "addUserProperties",
-        "clearEventProperties",
-        "identify",
-        "resetIdentity",
-        "removeEventProperty",
-        "setEventProperties",
-        "track",
-        "unsetEventProperty"
-      ];
-      for (let o = 0; o < p.length; o++) {
-        heapObj[p[o]] = n(p[o]);
-      }
-    };
-
-    heapObj.load(heapAppId);
+    const heapAppId = (import.meta as any).env.VITE_HEAP_APP_ID || "2565559675";
+    
+    // Check if heap snippet is already loaded or initialized
+    const heapObj = ((window as any).heap = (window as any).heap || []);
     
     // Auto-identify with session ID for funnel linking
-    if (this.sessionId) {
+    if (this.sessionId && typeof heapObj.identify === "function") {
       heapObj.identify(this.sessionId);
     }
 
     console.log(
-      `%c[SETU ANALYTICS ENGINE] Heap Analytics initialized with App ID: ${heapAppId}`,
+      `%c[SETU ANALYTICS ENGINE] Heap Analytics active with Environment ID: ${heapAppId}`,
       "color: #FFF; background: #3b82f6; font-weight: bold; padding: 2px 6px; border-radius: 4px;"
     );
   }

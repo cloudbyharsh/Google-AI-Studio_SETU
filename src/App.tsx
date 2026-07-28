@@ -14,6 +14,7 @@ import { Practitioner, Service, BookingRequest } from "./types";
 import PrototypeValidationObserver from "./components/PrototypeValidationObserver";
 import AnalyticsDebugger from "./components/AnalyticsDebugger";
 import { sendBookingEmail } from "./lib/email";
+import { analytics } from "./lib/analytics";
 
 type ScreenType =
   | "onboarding"
@@ -35,9 +36,29 @@ export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [selectedIntentForDirectory, setSelectedIntentForDirectory] = useState<string | null>(null);
 
-  // Smoothly scroll back to top of the viewport on screen transitions
+  // Smoothly scroll back to top of the viewport on screen transitions and track screen views
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const eventNameMap: Record<ScreenType, string> = {
+      onboarding: "landing_viewed",
+      directory: "practitioner_recommendations_viewed",
+      profile: "practitioner_profile_viewed",
+      "booking-request": "booking_started",
+      "request-received": "request_received_viewed",
+      "booking-secured": "booking_confirmed",
+      contact: "contact_viewed",
+      kundli: "kundli_viewed"
+    };
+
+    const eventName = eventNameMap[currentScreen] || `${currentScreen}_viewed`;
+    analytics.track(eventName, {
+      screen: currentScreen,
+      practitioner_id: selectedPractitioner?.id,
+      service_id: selectedService?.id,
+      page_url: window.location.href,
+      referrer: document.referrer || "direct"
+    });
   }, [currentScreen]);
 
   const handleHomeClick = () => {
