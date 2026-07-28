@@ -194,12 +194,21 @@ class SetuAnalyticsEngine {
   private initHeap() {
     const heapAppId = (import.meta as any).env.VITE_HEAP_APP_ID || "2565559675";
     
-    // Check if heap snippet is already loaded or initialized
+    // Check if heap snippet is initialized
     const heapObj = ((window as any).heap = (window as any).heap || []);
     
-    // Auto-identify with session ID for funnel linking
-    if (this.sessionId && typeof heapObj.identify === "function") {
-      heapObj.identify(this.sessionId);
+    // Auto-identify with session ID and add global session properties
+    if (this.sessionId) {
+      if (typeof heapObj.identify === "function") {
+        heapObj.identify(this.sessionId);
+      }
+      if (typeof heapObj.addEventProperties === "function") {
+        heapObj.addEventProperties({
+          session_id: this.sessionId,
+          app_name: "SETU",
+          app_env: "production"
+        });
+      }
     }
 
     console.log(
@@ -366,18 +375,21 @@ class SetuAnalyticsEngine {
     const heapObj = (window as any).heap;
     if (heapObj && typeof heapObj.track === "function") {
       try {
+        // Track the named event
         heapObj.track(eventName, cleanProps);
         
-        // Dispatch SPA virtual pageview to Heap if page/screen view event
-        if (typeof heapObj.trackPageview === "function" && (eventName.endsWith("_viewed") || cleanProps.screen)) {
-          heapObj.trackPageview({
-            page: cleanProps.screen || eventName,
+        // Also track explicit SPA page_view event for Heap screen analysis
+        if (eventName.endsWith("_viewed") || cleanProps.screen) {
+          const screenName = String(cleanProps.screen || eventName);
+          heapObj.track("page_view", {
+            page: screenName,
+            screen: screenName,
             url: window.location.href,
             title: document.title
           });
         }
 
-        // If the event includes user info, attach properties or identify in Heap
+        // If the event includes user info, attach user properties or identify in Heap
         if (properties.email) {
           if (typeof heapObj.identify === "function") {
             heapObj.identify(properties.email);

@@ -1107,9 +1107,9 @@ export default function BookingRequestView({
                       placeholder="4111 2222 3333 4444"
                       value={cardNumber}
                       onChange={(e) => {
-                        // Apply mock format 4-4-4-4
-                        const val = e.target.value.replace(/\s?/g, "").replace(/(\d{4})/g, "$1 ").trim();
-                        setCardNumber(val.slice(0, 19));
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                        const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+                        setCardNumber(formatted);
                       }}
                       className="w-full pl-10 pr-4 py-2.5 bg-ivory text-xs border border-sandalwood/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-maroon font-mono"
                     />
@@ -1126,8 +1126,12 @@ export default function BookingRequestView({
                       placeholder="12/28"
                       value={cardExpiry}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/\s?/g, "").replace(/(\d{2})/g, "$1/").replace(/\/$/, "");
-                        setCardExpiry(val.slice(0, 5));
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        let formatted = digits;
+                        if (digits.length >= 3) {
+                          formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+                        }
+                        setCardExpiry(formatted);
                       }}
                       className="w-full px-3 py-2.5 bg-ivory text-xs border border-sandalwood/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-maroon font-mono text-center"
                     />
@@ -1140,7 +1144,7 @@ export default function BookingRequestView({
                       placeholder="•••"
                       maxLength={4}
                       value={cardCvc}
-                      onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, ""))}
+                      onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
                       className="w-full px-3 py-2.5 bg-ivory text-xs border border-sandalwood/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-maroon font-mono text-center"
                     />
                   </div>
