@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 
-let activeSpreadsheetId: string | null = process.env.GOOGLE_SPREADSHEET_ID || null;
+let activeSpreadsheetId: string | null = process.env.GOOGLE_SPREADSHEET_ID || "1AtLHxh7BtJJ5pR_mWRguRUxikDlK7gpwmbRA_zWZx1g";
 
 async function getSheetsService() {
   const auth = new google.auth.GoogleAuth({
@@ -100,10 +100,65 @@ export async function getOrCreateSpreadsheet(): Promise<{ spreadsheetId: string;
   };
 }
 
+async function ensureSheetTabExists(sheets: any, spreadsheetId: string, tabName: string, headers: string[]) {
+  try {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheetTabs = meta.data.sheets || [];
+    const exists = sheetTabs.some((s: any) => s.properties?.title === tabName);
+
+    if (!exists) {
+      // Add tab
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: tabName,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      // Add headers
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [headers],
+        },
+      });
+    }
+  } catch (err) {
+    console.warn(`[SHEETS TAB NOTICE] Could not verify/create tab '${tabName}':`, err);
+  }
+}
+
 export async function appendBookingToSheet(bookingData: any) {
   try {
     const sheets = await getSheetsService();
     const { spreadsheetId, sheetUrl } = await getOrCreateSpreadsheet();
+
+    const headers = [
+      "Timestamp",
+      "Booking ID",
+      "Customer Name",
+      "Email",
+      "Phone",
+      "Service",
+      "Practitioner",
+      "Date & Time",
+      "Location / Address",
+      "Total Price",
+      "Status",
+      "Notes / Family Details"
+    ];
+
+    await ensureSheetTabExists(sheets, spreadsheetId, "Bookings", headers);
 
     const row = [
       new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
@@ -120,14 +175,26 @@ export async function appendBookingToSheet(bookingData: any) {
       bookingData.specialInstructions || bookingData.notes || ""
     ];
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "Bookings!A1",
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [row],
-      },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Bookings!A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    } catch (primaryErr) {
+      // Fallback to range A1 if specific tab range fails
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    }
 
     return { success: true, spreadsheetId, sheetUrl };
   } catch (err: any) {
@@ -141,6 +208,19 @@ export async function appendKundliLeadToSheet(leadData: any) {
     const sheets = await getSheetsService();
     const { spreadsheetId, sheetUrl } = await getOrCreateSpreadsheet();
 
+    const headers = [
+      "Timestamp",
+      "Kundli ID",
+      "Customer Name",
+      "Email",
+      "Phone",
+      "Birth Date",
+      "Birth Time",
+      "Birth Place"
+    ];
+
+    await ensureSheetTabExists(sheets, spreadsheetId, "Kundli Leads", headers);
+
     const row = [
       new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
       leadData.id || leadData.kundliId || `KL-${Date.now()}`,
@@ -152,19 +232,85 @@ export async function appendKundliLeadToSheet(leadData: any) {
       leadData.birthPlace || leadData.birthDetails?.birthPlace || ""
     ];
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "Kundli Leads!A1",
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [row],
-      },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Kundli Leads!A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    } catch (primaryErr) {
+      // Fallback to range A1 if specific tab range fails
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    }
 
     return { success: true, spreadsheetId, sheetUrl };
   } catch (err: any) {
     console.error("[GOOGLE SHEETS KUNDLI LEAD ERROR]", err);
     return { success: false, error: err.message || "Failed to save Kundli lead to Google Sheets" };
+  }
+}
+
+export async function appendContactInquiryToSheet(contactData: any) {
+  try {
+    const sheets = await getSheetsService();
+    const { spreadsheetId, sheetUrl } = await getOrCreateSpreadsheet();
+
+    const headers = [
+      "Timestamp",
+      "Inquiry ID",
+      "Customer Name",
+      "Email",
+      "Phone",
+      "Subject",
+      "Message"
+    ];
+
+    await ensureSheetTabExists(sheets, spreadsheetId, "Contact Inquiries", headers);
+
+    const row = [
+      new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
+      contactData.id || `INQ-${Date.now()}`,
+      contactData.name || "",
+      contactData.email || "",
+      contactData.phone || "",
+      contactData.subject || "",
+      contactData.message || ""
+    ];
+
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Contact Inquiries!A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    } catch (primaryErr) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "A1",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [row],
+        },
+      });
+    }
+
+    return { success: true, spreadsheetId, sheetUrl };
+  } catch (err: any) {
+    console.error("[GOOGLE SHEETS CONTACT INQUIRY ERROR]", err);
+    return { success: false, error: err.message || "Failed to save contact inquiry to Google Sheets" };
   }
 }
 

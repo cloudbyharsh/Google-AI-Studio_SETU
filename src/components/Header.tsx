@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Menu, X, ShieldCheck, HelpCircle, Sparkles, UserCheck, Home, MessageSquare } from "lucide-react";
+import { Menu, X, ShieldCheck, HelpCircle, Sparkles, UserCheck, Home, MessageSquare, FileSpreadsheet } from "lucide-react";
 import RotatingMandala from "./RotatingMandala";
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenVerification: () => void;
   onOpenHelp: () => void;
   onContactClick: () => void;
+  onOpenSheets?: () => void;
 }
 
 export default function Header({
@@ -18,6 +19,7 @@ export default function Header({
   onOpenVerification,
   onOpenHelp,
   onContactClick,
+  onOpenSheets,
 }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -94,6 +96,16 @@ export default function Header({
           >
             Contact Us
           </button>
+          {onOpenSheets && (
+            <button
+              onClick={onOpenSheets}
+              className="hover:text-maroon transition-colors cursor-pointer flex items-center gap-1 p-2 bg-emerald-50 text-emerald-800 border border-emerald-200/60 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-600"
+              title="Google Sheet Sync"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Google Sheet</span>
+            </button>
+          )}
         </nav>
 
         {/* Traditional reassurance label (desktop only) */}
@@ -159,6 +171,15 @@ export default function Header({
             <MessageSquare className="w-4 h-4 text-maroon" />
             Contact Us
           </button>
+          {onOpenSheets && (
+            <button
+              onClick={() => handleNavClick(onOpenSheets)}
+              className="w-full text-left py-3 px-4 text-xs font-sans font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all flex items-center gap-2 border border-emerald-200/60"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Google Sheet Integration
+            </button>
+          )}
         </div>
       )}
     </header>

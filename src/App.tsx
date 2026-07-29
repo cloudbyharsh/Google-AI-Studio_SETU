@@ -10,6 +10,7 @@ import BookingSecuredView from "./components/BookingSecuredView";
 import KundliView from "./components/KundliView";
 import ContactView from "./components/ContactView";
 import { VerificationModal, HelpModal } from "./components/TrustModals";
+import GoogleSheetsModal from "./components/GoogleSheetsModal";
 import { Practitioner, Service, BookingRequest } from "./types";
 import PrototypeValidationObserver from "./components/PrototypeValidationObserver";
 import AnalyticsDebugger from "./components/AnalyticsDebugger";
@@ -41,6 +42,7 @@ export default function App() {
   const [isKundliOpen, setIsKundliOpen] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSheetsOpen, setIsSheetsOpen] = useState(false);
   const [selectedIntentForDirectory, setSelectedIntentForDirectory] = useState<string | null>(null);
 
   // Smoothly scroll back to top of the viewport on screen transitions and track screen views
@@ -174,6 +176,7 @@ export default function App() {
         onOpenVerification={() => setIsVerificationOpen(true)}
         onOpenHelp={() => setIsHelpOpen(true)}
         onContactClick={() => setCurrentScreen("contact")}
+        onOpenSheets={() => setIsSheetsOpen(true)}
       />
 
       {/* Interactive Step Stepper */}
@@ -380,6 +383,7 @@ export default function App() {
       {/* Trust & Policy Modals */}
       <VerificationModal isOpen={isVerificationOpen} onClose={() => setIsVerificationOpen(false)} />
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <GoogleSheetsModal isOpen={isSheetsOpen} onClose={() => setIsSheetsOpen(false)} />
 
       {/* Development-only User Testing Observer Panel */}
       <PrototypeValidationObserver currentScreen={currentScreen} />

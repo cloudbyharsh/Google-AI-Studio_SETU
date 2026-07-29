@@ -7,6 +7,7 @@ import fs from "fs/promises";
 import {
   appendBookingToSheet,
   appendKundliLeadToSheet,
+  appendContactInquiryToSheet,
   getOrCreateSpreadsheet,
   setCustomSpreadsheetId,
 } from "./server/sheets";
@@ -123,6 +124,17 @@ app.post(["/api/generate-kundli", "/generate-kundli"], async (req, res) => {
     }
 
     const kundliId = `kundli-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+    // Log/Sync lead to Google Sheets asynchronously
+    appendKundliLeadToSheet({
+      id: kundliId,
+      name,
+      email: req.body.email || "",
+      phone: req.body.phone || "",
+      birthDate,
+      birthTime: birthTime || (isTimeApprox ? "Approximate" : ""),
+      birthPlace,
+    }).catch((err) => console.error("[SHEETS SYNC NOTICE]", err));
 
     try {
       const ai = getGeminiClient();
@@ -264,7 +276,7 @@ Return the response STRICTLY as a JSON object matching this schema:
 
   // Unlock remaining Kundli sections and send complete email (Requires Lead details)
   app.post(["/api/unlock-kundli", "/unlock-kundli"], async (req, res) => {
-    const { kundliId, name, email, phone } = req.body;
+    const { kundliId, name, email, phone, birthDate: reqBirthDate, birthTime: reqBirthTime, birthPlace: reqBirthPlace } = req.body;
 
     if (!kundliId || !email) {
       return res.status(400).json({ error: "Missing required fields: kundliId and email are required." });
@@ -274,18 +286,21 @@ Return the response STRICTLY as a JSON object matching this schema:
       let cachedData = kundliCache.get(kundliId);
       if (!cachedData) {
         console.log(`[KUNDLI] Stale/missing session for ${kundliId}. Creating custom report...`);
-        const fallback = generateFallbackReport(name || "Seeker", "", "", "");
+        const fallback = generateFallbackReport(name || "Seeker", reqBirthDate || "", reqBirthTime || "", reqBirthPlace || "");
         cachedData = {
           name: name || "Seeker",
-          birthDate: "Not specified",
-          birthTime: "",
-          birthPlace: "Not specified",
+          birthDate: reqBirthDate || "Not specified",
+          birthTime: reqBirthTime || "",
+          birthPlace: reqBirthPlace || "Not specified",
           isTimeApprox: false,
           report: fallback
         };
       }
 
-      const { report, birthDate, birthTime, birthPlace } = cachedData;
+      const report = cachedData.report;
+      const birthDate = reqBirthDate || cachedData.birthDate;
+      const birthTime = reqBirthTime || cachedData.birthTime;
+      const birthPlace = reqBirthPlace || cachedData.birthPlace;
       const userName = name || cachedData.name;
 
       // Construct a premium email template using the generated sections
@@ -657,6 +672,16 @@ Return the response STRICTLY as a JSON object matching this schema:
     } catch (error: any) {
       console.error("[SHEETS SAVE KUNDLI ERROR]", error);
       return res.status(500).json({ success: false, error: error.message || "Failed to save Kundli lead to Google Sheets" });
+    }
+  });
+
+  app.post(["/api/sheets/save-contact", "/sheets/save-contact"], async (req, res) => {
+    try {
+      const result = await appendContactInquiryToSheet(req.body);
+      return res.json(result);
+    } catch (error: any) {
+      console.error("[SHEETS SAVE CONTACT ERROR]", error);
+      return res.status(500).json({ success: false, error: error.message || "Failed to save contact inquiry to Google Sheets" });
     }
   });
 

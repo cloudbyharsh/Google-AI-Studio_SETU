@@ -153,6 +153,9 @@ export default function KundliView({ onBackToHome }: KundliViewProps) {
           name: userName,
           email,
           phone,
+          birthDate,
+          birthTime: birthTime || (isTimeApprox ? "Approximate" : ""),
+          birthPlace,
         }),
       });
 

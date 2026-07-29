@@ -47,6 +47,27 @@ export default function ContactView({ onBackToHome }: ContactViewProps) {
       character_count: message.length,
     });
 
+    // Send to Google Sheets backend
+    fetch("/api/sheets/save-contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: `contact-${Date.now()}`,
+        name,
+        email,
+        phone,
+        subject,
+        message,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          console.log("[SHEETS] Saved contact inquiry to Google Sheets");
+        }
+      })
+      .catch((err) => console.error("[SHEETS ERROR]", err));
+
     // Simulate server request
     setTimeout(() => {
       setIsSubmitting(false);
